@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    command: ["make", "dev"]
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://adm:123@db:5432/tulltaxan
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: adm
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: tulltaxan
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
