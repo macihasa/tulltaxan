@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"tulltaxan/pkg/filedist"
@@ -26,13 +27,16 @@ func main() {
 	}
 	defer conn.Close(ctx)
 
-	log.Println("Successfully connected to the database.")
-
-	// Verify the connection with a simple query
-	var result string
-	err = conn.QueryRow(ctx, "SELECT 'Connected tbo PostgreSQL!'").Scan(&result)
+	ddlQuery, err := os.ReadFile(`./sql/ddl.sql`)
 	if err != nil {
-		log.Fatalf("Query failed: %v", err)
+		log.Fatal("unable to read ddl file content: ", err)
+	}
+
+	fmt.Println(string(ddlQuery))
+
+	_, err = conn.Exec(ctx, string(ddlQuery))
+	if err != nil {
+		log.Fatal("unable to execute ddl query: ", err)
 	}
 
 	filedist.StartDbMaintenanceScheduler()
