@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"tulltaxan/pkg/filedist"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -29,11 +30,11 @@ func main() {
 
 	// Verify the connection with a simple query
 	var result string
-	err = conn.QueryRow(ctx, "SELECT 'Connected to PostgreSQL!'").Scan(&result)
+	err = conn.QueryRow(ctx, "SELECT 'Connected tbo PostgreSQL!'").Scan(&result)
 	if err != nil {
 		log.Fatalf("Query failed: %v", err)
 	}
 
-	log.Println(result)
+	filedist.StartDbMaintenanceScheduler()
 
 }

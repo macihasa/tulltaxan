@@ -1,6 +1,6 @@
 run:
-	@echo "Starting the application..."
-	@go run main.go
+	@echo "Running the application inside the app container..."
+	@docker-compose up -d app
 
 dev:
 	@echo "Starting development environment..."
