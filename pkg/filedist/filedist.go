@@ -4,32 +4,37 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
+	"tulltaxan/pkg/xmltypes"
 
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-func StartDbMaintenanceScheduler() {
+func StartDbMaintenanceScheduler(conn *pgx.Conn) {
 	pubKey, err := downloadPublicKey(`https://distr.tullverket.se/tulltaxan/Tulltaxan_Fildistribution.asc`)
 	if err != nil {
 		slog.Error("downloadPublicKey", "error", err)
 	}
 
 	// Perform initial database maintenance immediately
-	err = performDbMaintenance(pubKey)
+	err = performDbMaintenance(pubKey, conn)
 	if err != nil {
 		slog.Error("Error during initial database maintenance", "error", err)
 	}
@@ -53,7 +58,7 @@ func StartDbMaintenanceScheduler() {
 			time.Sleep(timeUntilNextRun)
 
 			// Perform scheduled database maintenance at 11:30 PM
-			err := performDbMaintenance(pubKey)
+			err := performDbMaintenance(pubKey, conn)
 			if err != nil {
 				slog.Error("Error during scheduled database maintenance", "error", err)
 			}
@@ -83,17 +88,17 @@ func downloadPublicKey(url string) (string, error) {
 
 // performDbMaintenance performs the necessary maintenance tasks on the database.
 // It downloads new files from the distribution, processes them into the database, and sets the active codes.
-func performDbMaintenance(pubKey string) error {
+func performDbMaintenance(pubKey string, conn *pgx.Conn) error {
 	slog.Info("Starting database maintenance")
 
 	slog.Info("Downloading new files from distribution")
 	// Download new files from distribution
-	totFiles, err := downloadAndPrepareNewFiles("https://distr.tullverket.se/tulltaxan/xml/tot/", pubKey)
+	totFiles, err := downloadAndPrepareNewFiles("https://distr.tullverket.se/tulltaxan/xml/tot/", pubKey, conn)
 	if err != nil {
 		return fmt.Errorf("error fetching tot files: %w", err)
 	}
 
-	difFiles, err := downloadAndPrepareNewFiles("https://distr.tullverket.se/tulltaxan/xml/dif/", pubKey)
+	difFiles, err := downloadAndPrepareNewFiles("https://distr.tullverket.se/tulltaxan/xml/dif/", pubKey, conn)
 	if err != nil {
 		return fmt.Errorf("error fetching dif files: %w", err)
 	}
@@ -106,7 +111,7 @@ func performDbMaintenance(pubKey string) error {
 // downloadAndPrepareNewFiles retrieves and prepares a list of files from a specified distribution URL.
 // This function downloads, decrypts, and decompresses files that are available in the distribution.
 // If a file already exists in the output directory, it is skipped. It returns a list of the resulting files.
-func downloadAndPrepareNewFiles(distUrl, pubKey string) ([]string, error) {
+func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]string, error) {
 	slog.Debug("Retrieving files", "URL", distUrl)
 
 	response, err := http.Get(distUrl)
@@ -124,15 +129,14 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sortFilesByDate: %w", err)
 	}
-	fmt.Println(fileList)
 
-	// // Query already inserted filenames
-	// insertedFileNames, err := getInsertedFileNames(db)
+	// Query already inserted filenames
+	// insertedFileNames, err := getInsertedFileNames(conn)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("getInsertedFileNames: %w", err)
 	// }
 
-	// // filter out inserted files to only download new ones.
+	// filter out inserted files to only download new ones.
 	// fileList = filterOutInsertedFiles(fileList, insertedFileNames)
 
 	// Iterate through file list and download all files for the current month
@@ -147,6 +151,38 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string) ([]string, error) {
 		gzReader, err := fetchDecryptedReader(fileUrl, pubKey)
 		if err != nil {
 			return nil, fmt.Errorf("downloadAndPrepareFile: %w", err)
+		}
+		export := new(xmltypes.Export)
+		err = xml.NewDecoder(gzReader).Decode(export)
+		if err != nil {
+			return nil, err
+		}
+
+		// Reflect over struct values to insert into the database
+		val := reflect.ValueOf(export.Items)
+		for i := 0; i < val.NumField(); i++ {
+			field := val.Field(i)
+			fieldType := field.Type()
+
+			// Check if the field implements the FileDistItem interface
+			if fieldType.Implements(reflect.TypeOf((*xmltypes.FileDistItem)(nil)).Elem()) {
+				if field.Len() > 0 {
+					slog.Debug("Inserting struct values", "type", field.Type().Name())
+				}
+				// Execute the InsertContentToDb method on the field
+				callvalues := field.MethodByName("BatchInsert").Call([]reflect.Value{reflect.ValueOf(context.Background()), reflect.ValueOf(conn), reflect.ValueOf(100000)})
+				for _, callvalue := range callvalues {
+					if !callvalue.IsNil() {
+						return nil, fmt.Errorf("InsertContentToDb: %w", callvalue.Interface().(error))
+					}
+				}
+			}
+		}
+
+		fileNameStmt := `INSERT INTO inserted_files (file_name) VALUES ($1) ON CONFLICT DO NOTHING;`
+		_, err = conn.Exec(context.Background(), fileNameStmt, v)
+		if err != nil {
+			return nil, fmt.Errorf("unable to insert filename to db: %w", err)
 		}
 
 		// Save the resulting file name in the list
@@ -192,8 +228,8 @@ func parseHtmlForPgpAnchors(tokenizer *html.Tokenizer) (anchorRefs []string, err
 
 // getInsertedFileNames sends a select query to the inserted_files table in DB
 // and returns a slice of all filenames it retrieved.
-func getInsertedFileNames(db *sql.DB) ([]string, error) {
-	rows, err := db.Query("SELECT file_name FROM inserted_files;")
+func getInsertedFileNames(conn *pgx.Conn) ([]string, error) {
+	rows, err := conn.Query(context.Background(), "SELECT file_name FROM inserted_files;")
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +259,7 @@ func filterOutInsertedFiles(distributionFiles []string, alreadyImportedFileNames
 	newFiles := []string{}
 	for _, file := range distributionFiles {
 		// If the file is not in the local map, it is new
-		if !alreadyImportedFileMap[strings.TrimSuffix(filepath.Base(file), ".gz.pgp")] {
+		if !alreadyImportedFileMap[filepath.Base(file)] {
 			newFiles = append(newFiles, file)
 		} else {
 			slog.Debug("Skipping filedist file, already exists locally", "filename", file)
@@ -293,7 +329,6 @@ func fetchDecryptedReader(url, pubKey string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to get PGP file: %w", err)
 	}
-	defer response.Body.Close()
 
 	// Decrypt and decompress
 	gzReader, err := decryptAndExtractGzippedFile(pubKey, response.Body)

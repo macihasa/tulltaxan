@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"tulltaxan/pkg/filedist"
@@ -31,14 +30,11 @@ func main() {
 	if err != nil {
 		log.Fatal("unable to read ddl file content: ", err)
 	}
-
-	fmt.Println(string(ddlQuery))
-
 	_, err = conn.Exec(ctx, string(ddlQuery))
 	if err != nil {
 		log.Fatal("unable to execute ddl query: ", err)
 	}
 
-	filedist.StartDbMaintenanceScheduler()
+	filedist.StartDbMaintenanceScheduler(conn)
 
 }
