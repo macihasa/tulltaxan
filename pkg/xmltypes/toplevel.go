@@ -35,7 +35,7 @@ type Items struct {
 	Footnotes                    Footnotes                    `xml:"footnote"`
 	GeographicalAreas            GeographicalAreas            `xml:"geographicalArea"`
 	GoodsNomenclatureGroups      GoodsNomenclatureGroups      `xml:"goodsNomenclatureGroup"`
-	// GoodsNomenclatures              GoodsNomenclatures              `xml:"goodsNomenclature"`
+	GoodsNomenclatures           GoodsNomenclatures           `xml:"goodsNomenclature"`
 	// Record                          []Record                        `xml:"record"`
 	// LookupTables                    LookupTables                    `xml:"lookupTable"`
 	// MeasureActions                  MeasureActions                  `xml:"measureAction"`
