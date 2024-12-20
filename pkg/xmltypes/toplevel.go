@@ -31,7 +31,7 @@ type Items struct {
 	CodeTypes                    CodeTypes                    `xml:"codeType"`
 	DeclarableGoodsNomenclatures DeclarableGoodsNomenclatures `xml:"declarableGoodsNomenclature"`
 	DutyExpressions              DutyExpressions              `xml:"dutyExpression"`
-	// ExportRefundNomenclatures       ExportRefundNomenclatures       `xml:"exportRefundNomenclature"`
+	ExportRefundNomenclatures    ExportRefundNomenclatures    `xml:"exportRefundNomenclature"`
 	// Footnotes                       Footnotes                       `xml:"footnote"`
 	// GeographicalAreas               GeographicalAreas               `xml:"geographicalArea"`
 	// GoodsNomenclatureGroups         GoodsNomenclatureGroups         `xml:"goodsNomenclatureGroup"`
