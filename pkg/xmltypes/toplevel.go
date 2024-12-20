@@ -34,7 +34,7 @@ type Items struct {
 	ExportRefundNomenclatures    ExportRefundNomenclatures    `xml:"exportRefundNomenclature"`
 	Footnotes                    Footnotes                    `xml:"footnote"`
 	GeographicalAreas            GeographicalAreas            `xml:"geographicalArea"`
-	// GoodsNomenclatureGroups         GoodsNomenclatureGroups         `xml:"goodsNomenclatureGroup"`
+	GoodsNomenclatureGroups      GoodsNomenclatureGroups      `xml:"goodsNomenclatureGroup"`
 	// GoodsNomenclatures              GoodsNomenclatures              `xml:"goodsNomenclature"`
 	// Record                          []Record                        `xml:"record"`
 	// LookupTables                    LookupTables                    `xml:"lookupTable"`
