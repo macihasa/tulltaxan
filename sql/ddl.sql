@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS measure_condition_component (
 	measurement_unit_qualifier_code VARCHAR(255),
 	monetary_unit_code VARCHAR(255),
 	national INT,
-	PRIMARY KEY (parent_sid, duty_expression_id, duty_amount),
+	PRIMARY KEY (parent_sid, duty_expression_id),
 	FOREIGN key (parent_sid) REFERENCES measure_condition (sid) ON DELETE cascade
 );
 

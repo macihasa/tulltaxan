@@ -37,11 +37,11 @@ type Items struct {
 	GoodsNomenclatureGroups      GoodsNomenclatureGroups      `xml:"goodsNomenclatureGroup"`
 	GoodsNomenclatures           GoodsNomenclatures           `xml:"goodsNomenclature"`
 	// Record                          []Record                        `xml:"record"`
-	// LookupTables                    LookupTables                    `xml:"lookupTable"`
-	// MeasureActions                  MeasureActions                  `xml:"measureAction"`
-	// MeasureConditionCodes           MeasureConditionCodes           `xml:"measureConditionCode"`
-	// MeasureTypes                    MeasureTypes                    `xml:"measureType"`
-	// Measures                        Measures                        `xml:"measure"`
+	LookupTables          LookupTables          `xml:"lookupTable"`
+	MeasureActions        MeasureActions        `xml:"measureAction"`
+	MeasureConditionCodes MeasureConditionCodes `xml:"measureConditionCode"`
+	MeasureTypes          MeasureTypes          `xml:"measureType"`
+	Measures              Measures              `xml:"measure"`
 	// MeasurementUnitQualifiers       MeasurementUnitQualifiers       `xml:"measurementUnitQualifier"`
 	// MeasurementUnit                 []MeasurementUnit               `xml:"measurementUnit"`
 	// Measurements                    Measurements                    `xml:"measurement"`

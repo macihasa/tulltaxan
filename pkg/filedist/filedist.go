@@ -131,13 +131,13 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 	}
 
 	// Query already inserted filenames
-	// insertedFileNames, err := getInsertedFileNames(conn)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("getInsertedFileNames: %w", err)
-	// }
+	insertedFileNames, err := getInsertedFileNames(conn)
+	if err != nil {
+		return nil, fmt.Errorf("getInsertedFileNames: %w", err)
+	}
 
 	// filter out inserted files to only download new ones.
-	// fileList = filterOutInsertedFiles(fileList, insertedFileNames)
+	fileList = filterOutInsertedFiles(fileList, insertedFileNames)
 
 	// Iterate through file list and download all files for the current month
 	for _, v := range fileList {
@@ -166,25 +166,24 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 
 			// Check if the field implements the FileDistItem interface
 			if fieldType.Implements(reflect.TypeOf((*xmltypes.FileDistItem)(nil)).Elem()) {
-				if field.Len() > 0 {
-					slog.Debug("Inserting struct values", "type", field.Type().Name())
+				if field.Len() < 1 {
+					continue
 				}
+				slog.Debug("Inserting struct values", "type", field.Type().Name())
 				// Execute the InsertContentToDb method on the field
-				callvalues := field.MethodByName("BatchInsert").Call([]reflect.Value{reflect.ValueOf(context.Background()), reflect.ValueOf(conn), reflect.ValueOf(100000)})
+				callvalues := field.MethodByName("BatchInsert").Call([]reflect.Value{reflect.ValueOf(context.Background()), reflect.ValueOf(conn), reflect.ValueOf(10000)})
 				for _, callvalue := range callvalues {
 					if !callvalue.IsNil() {
 						return nil, fmt.Errorf("InsertContentToDb: %w", callvalue.Interface().(error))
 					}
 				}
+				fileNameStmt := `INSERT INTO inserted_files (file_name) VALUES ($1) ON CONFLICT DO NOTHING;`
+				_, err = conn.Exec(context.Background(), fileNameStmt, v)
+				if err != nil {
+					return nil, fmt.Errorf("unable to insert filename to db: %w", err)
+				}
 			}
 		}
-
-		fileNameStmt := `INSERT INTO inserted_files (file_name) VALUES ($1) ON CONFLICT DO NOTHING;`
-		_, err = conn.Exec(context.Background(), fileNameStmt, v)
-		if err != nil {
-			return nil, fmt.Errorf("unable to insert filename to db: %w", err)
-		}
-
 		// Save the resulting file name in the list
 		slog.Info("Downloaded and prepared dist file", "filename", v)
 
