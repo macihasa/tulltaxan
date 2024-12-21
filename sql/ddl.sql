@@ -612,6 +612,27 @@ CREATE TABLE IF NOT EXISTS lookup_table_description (
 	FOREIGN key (parent_sid) REFERENCES lookup_table (sid) ON DELETE cascade
 );
 
+-- Measuremnt Unit
+CREATE TABLE IF NOT EXISTS measurement_unit (
+    measurement_unit_code CHAR(3) PRIMARY KEY,
+    date_start DATE NOT NULL,
+    date_end DATE,
+    national SMALLINT CHECK (national IN (0, 1)),
+    national_abbreviation VARCHAR(200),
+    change_type CHAR(1) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS measurement_unit_description (
+    parent_unit_code CHAR(3) NOT NULL REFERENCES measurement_unit(measurement_unit_code) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    language_id CHAR(2) NOT NULL,
+    national SMALLINT CHECK (national IN (0, 1)),
+    CONSTRAINT unique_description_per_language UNIQUE (parent_unit_code, language_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_measurement_unit_description_language ON measurement_unit_description (language_id);
+
+
 -- Measurement Unit Qualifier
 CREATE TABLE IF NOT EXISTS measurement_unit_qualifier (
 	measurement_unit_qualifier_code VARCHAR(255) PRIMARY KEY,
