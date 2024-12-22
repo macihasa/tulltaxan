@@ -612,7 +612,7 @@ CREATE TABLE IF NOT EXISTS lookup_table_description (
 	FOREIGN key (parent_sid) REFERENCES lookup_table (sid) ON DELETE cascade
 );
 
--- Measuremnt Unit
+-- Measurement Unit
 CREATE TABLE IF NOT EXISTS measurement_unit (
     measurement_unit_code CHAR(3) PRIMARY KEY,
     date_start DATE NOT NULL,
@@ -652,6 +652,169 @@ CREATE TABLE IF NOT EXISTS measurement_unit_qualifier_description (
 	),
 	FOREIGN key (parent_measurement_unit_qualifier_code) REFERENCES measurement_unit_qualifier (measurement_unit_qualifier_code)
 );
+
+-- Meursing Additional Code
+CREATE TABLE IF NOT EXISTS meursing_additional_code (
+    meursing_table_plan_id SERIAL PRIMARY KEY,
+    additional_code_id TEXT NOT NULL,
+    date_start DATE NOT NULL,
+    date_end DATE,
+    national INTEGER NOT NULL,
+    change_type TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS meursing_table_cell_component (
+    id SERIAL PRIMARY KEY,
+    parent_table_plan_id INTEGER NOT NULL REFERENCES meursing_additional_code (meursing_table_plan_id) ON DELETE CASCADE,
+    heading_number INTEGER NOT NULL,
+    row_column_code INTEGER NOT NULL,
+    subheading_sequence_number INTEGER NOT NULL,
+    date_start DATE NOT NULL,
+    national INTEGER NOT NULL,
+    UNIQUE (parent_table_plan_id, heading_number, row_column_code, subheading_sequence_number)
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_meursing_additional_code_id ON meursing_additional_code (meursing_table_plan_id);
+CREATE INDEX IF NOT EXISTS idx_meursing_table_cell_component_parent_id ON meursing_table_cell_component (parent_table_plan_id);
+
+-- Meursing heading
+CREATE TABLE IF NOT EXISTS meursing_heading (
+    heading_number INT NOT NULL,
+    meursing_table_plan_id INT NOT NULL,
+    row_column_code INT NOT NULL,
+    date_start DATE NOT NULL,
+    national INT NOT NULL,
+    change_type TEXT NOT NULL,
+    PRIMARY KEY (heading_number, meursing_table_plan_id, row_column_code)
+);
+
+CREATE TABLE IF NOT EXISTS meursing_heading_footnote_association (
+    id SERIAL PRIMARY KEY,
+    parent_heading_id INT NOT NULL,
+    footnote_id INT NOT NULL,
+    footnote_type TEXT NOT NULL,
+    date_start DATE,
+    national INT,
+	UNIQUE (parent_heading_id, footnote_id, footnote_type)
+);
+
+CREATE TABLE IF NOT EXISTS meursing_heading_text (
+    id SERIAL PRIMARY KEY,
+    parent_heading_id INT NOT NULL,
+    description TEXT,
+    language_id TEXT NOT NULL,
+    national INT NOT NULL,
+	UNIQUE (parent_heading_id, language_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meursing_heading_table_plan ON meursing_heading (meursing_table_plan_id);
+CREATE INDEX IF NOT EXISTS idx_meursing_heading_footnote_parent ON meursing_heading_footnote_association (parent_heading_id);
+CREATE INDEX IF NOT EXISTS idx_meursing_heading_text_parent ON meursing_heading_text (parent_heading_id);
+
+-- Meursing subheading
+CREATE TABLE IF NOT EXISTS meursing_subheading (
+    id SERIAL PRIMARY KEY,
+    heading_number INT NOT NULL,
+    meursing_table_plan_id INT NOT NULL,
+    row_column_code INT NOT NULL,
+    subheading_sequence_number INT NOT NULL,
+    date_start DATE,
+    description TEXT,
+    national INT,
+    change_type TEXT,
+    UNIQUE (heading_number, meursing_table_plan_id, row_column_code, subheading_sequence_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meursing_subheading_heading_plan ON meursing_subheading (heading_number, meursing_table_plan_id);
+CREATE INDEX IF NOT EXISTS idx_meursing_subheading_row_column ON meursing_subheading (row_column_code);
+
+-- Meursing table plan
+CREATE TABLE IF NOT EXISTS meursing_table_plan (
+    meursing_table_plan_id INT PRIMARY KEY,
+    date_start DATE,
+    national INT,
+    change_type TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_meursing_table_plan_id ON meursing_table_plan (meursing_table_plan_id);
+
+-- Preference code
+CREATE TABLE IF NOT EXISTS preference_code (
+    pref_code INT PRIMARY KEY,
+    date_start DATE,
+    change_type TEXT
+);
+
+CREATE TABLE IF NOT EXISTS preference_code_description (
+    id SERIAL PRIMARY KEY,
+    parent_pref_code INT REFERENCES preference_code (pref_code) ON DELETE CASCADE,
+    description TEXT,
+    language_id TEXT NOT NULL,
+    UNIQUE (parent_pref_code, language_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_preference_code ON preference_code (pref_code);
+CREATE INDEX IF NOT EXISTS idx_preference_code_description_parent ON preference_code_description (parent_pref_code);
+
+-- Quotas
+CREATE TABLE IF NOT EXISTS quota_definition (
+    sid INT PRIMARY KEY,
+    sid_quota_order_number INT,
+    quota_critical_state_code TEXT,
+    quota_critical_threshold INT,
+    quota_maximum_precision INT,
+    quota_order_number INT,
+    change_type TEXT,
+    description TEXT,
+    initial_volume FLOAT,
+    measurement_unit_code TEXT,
+    measurement_unit_qualifier_code TEXT,
+    monetary_unit_code TEXT,
+    volume FLOAT,
+    date_start DATE,
+    date_end DATE,
+    national INT
+);
+CREATE INDEX IF NOT EXISTS idx_quota_definition_sid_quota_order_number ON quota_definition (sid_quota_order_number);
+
+CREATE TABLE IF NOT EXISTS quota_suspension_period (
+    sid INT PRIMARY KEY,
+	parent_sid INT NOT NULL,
+    description TEXT,
+    date_start DATE,
+    date_end DATE,
+    national INT,
+    FOREIGN KEY (parent_sid) REFERENCES quota_definition (sid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_quota_suspension_period_sid ON quota_suspension_period (sid);
+
+
+CREATE TABLE IF NOT EXISTS quota_blocking_period (
+    sid INT PRIMARY KEY,
+	parent_sid INT NOT NULL,
+    blocking_period_type INT,
+    description TEXT,
+    date_start DATE,
+    date_end DATE,
+    national INT,
+    FOREIGN KEY (parent_sid) REFERENCES quota_definition (sid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_quota_blocking_period_sid ON quota_blocking_period (sid);
+
+CREATE TABLE IF NOT EXISTS quota_association (
+    sid_sub_quota INT PRIMARY KEY,
+	parent_sid INT NOT NULL,
+    relation_type TEXT,
+    coefficient FLOAT,
+    national INT,
+    FOREIGN KEY (parent_sid) REFERENCES quota_definition (sid) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_quota_association_sid_sub_quota ON quota_association (sid_sub_quota);
+CREATE INDEX IF NOT EXISTS idx_quota_association_relation_type ON quota_association (relation_type);
+
 
 -- Base Regulation
 CREATE TABLE IF NOT EXISTS base_regulation (

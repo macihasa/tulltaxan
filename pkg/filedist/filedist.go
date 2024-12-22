@@ -170,11 +170,11 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 					continue
 				}
 				slog.Debug("Inserting struct values", "type", field.Type().Name())
-				// Execute the InsertContentToDb method on the field
+				// Execute the BatchInsert method on the field
 				callvalues := field.MethodByName("BatchInsert").Call([]reflect.Value{reflect.ValueOf(context.Background()), reflect.ValueOf(conn), reflect.ValueOf(10000)})
 				for _, callvalue := range callvalues {
 					if !callvalue.IsNil() {
-						return nil, fmt.Errorf("InsertContentToDb: %w", callvalue.Interface().(error))
+						return nil, fmt.Errorf("BatchInsert: %w", callvalue.Interface().(error))
 					}
 				}
 				fileNameStmt := `INSERT INTO inserted_files (file_name) VALUES ($1) ON CONFLICT DO NOTHING;`
@@ -185,7 +185,7 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 			}
 		}
 		// Save the resulting file name in the list
-		slog.Info("Downloaded and prepared dist file", "filename", v)
+		slog.Info("Dist file processed into DB", "filename", v)
 
 		gzReader.Close()
 	}
