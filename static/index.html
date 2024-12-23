@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTMX Example</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <h1>HS Code Search</h1>
+
+    <!-- Search input with HTMX -->
+    <input type="text" id="search" name="q" placeholder="Enter search term..."
+           hx-get="/search"
+           hx-trigger="keyup changed delay:50ms"
+           hx-target="#results"
+           hx-swap="innerHTML">
+
+    <!-- Results container -->
+    <div id="results"></div>
+</body>
+</html>

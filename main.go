@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"tulltaxan/pkg/filedist"
+	"tulltaxan/pkg/handlers"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -36,5 +38,19 @@ func main() {
 	}
 
 	filedist.StartDbMaintenanceScheduler(conn)
+
+	staticDir := "./static"
+	fs := http.FileServer(http.Dir(staticDir))
+	http.Handle("/", fs)
+	port := "8080"
+
+	http.Handle("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlers.SearchHandler(w, r, conn)
+	}))
+
+	log.Printf("server listening on port %s\n", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal("server crashed: ", err)
+	}
 
 }
