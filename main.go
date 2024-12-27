@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,10 @@ func main() {
 
 	log.Println("Starting the application...")
 
+	// Constants
+	const ddlFile = "./sql/ddl.sql"
+	const ddlViewsFile = "./sql/ddl_views.sql"
+
 	// Connect to the database
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, dbURL)
@@ -28,13 +33,8 @@ func main() {
 	}
 	defer conn.Close(ctx)
 
-	ddlQuery, err := os.ReadFile(`./sql/ddl.sql`)
-	if err != nil {
-		log.Fatal("unable to read ddl file content: ", err)
-	}
-	_, err = conn.Exec(ctx, string(ddlQuery))
-	if err != nil {
-		log.Fatal("unable to execute ddl query: ", err)
+	if err := insertSQLFiles([]string{ddlFile, ddlViewsFile}, ctx, conn); err != nil {
+		log.Fatal("insertSQLFiles: ", err)
 	}
 
 	filedist.StartDbMaintenanceScheduler(conn)
@@ -53,4 +53,19 @@ func main() {
 		log.Fatal("server crashed: ", err)
 	}
 
+}
+
+func insertSQLFiles(paths []string, ctx context.Context, conn *pgx.Conn) error {
+	for _, path := range paths {
+		query, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("unable to read ddl file %s: %w", path, err)
+		}
+		_, err = conn.Exec(ctx, string(query))
+		if err != nil {
+			return fmt.Errorf("unable to execute query for file %s: %w", path, err)
+		}
+	}
+
+	return nil
 }

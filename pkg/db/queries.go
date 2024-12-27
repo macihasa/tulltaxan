@@ -2,19 +2,16 @@ package db
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // HSCode represents a result from the HS code search
 type HSCode struct {
-	Code         string
-	Descriptions []struct {
-		Description string
-		LanguageID  string
-	}
+	Code        string `json:"code"`
+	Description string `json:"description"`
 }
 
 // SearchHSCodes queries the materialized view for matching HS codes
@@ -22,18 +19,19 @@ func SearchHSCodes(ctx context.Context, conn *pgx.Conn, query string) ([]HSCode,
 	if query == "" {
 		return nil, errors.New("query string cannot be empty")
 	}
-
 	// Query the materialized view
+	processedQuery := preprocessQuery(query)
 	rows, err := conn.Query(ctx, `
 		SELECT
-			hs_code,
+			cn_code,
 			descriptions
 		FROM
 			mv_goods_nomenclature_search
 		WHERE
-			to_tsvector('english', hs_code || ' ' || flattened_descriptions) @@ plainto_tsquery($1)
-		LIMIT 50;
-	`, query)
+			search_vector @@ to_tsquery('swedish', $1)
+		LIMIT 20;
+	`, processedQuery)
+
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +41,7 @@ func SearchHSCodes(ctx context.Context, conn *pgx.Conn, query string) ([]HSCode,
 	var results []HSCode
 	for rows.Next() {
 		var hsCode HSCode
-		var descriptions []byte // Descriptions are stored as JSONB in the database
-		if err := rows.Scan(&hsCode.Code, &descriptions); err != nil {
-			return nil, err
-		}
-
-		// Decode the JSONB descriptions into Go structs
-		if err := json.Unmarshal(descriptions, &hsCode.Descriptions); err != nil {
+		if err := rows.Scan(&hsCode.Code, &hsCode.Description); err != nil {
 			return nil, err
 		}
 
@@ -57,4 +49,11 @@ func SearchHSCodes(ctx context.Context, conn *pgx.Conn, query string) ([]HSCode,
 	}
 
 	return results, nil
+}
+
+// Preprocess the query to handle phrases
+func preprocessQuery(input string) string {
+	input = strings.TrimPrefix(input, " ")
+	input = strings.TrimSuffix(input, " ")
+	return strings.ReplaceAll(input, " ", " <-> ")
 }

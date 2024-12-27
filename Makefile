@@ -1,6 +1,7 @@
 run:
 	@echo "Running the application inside the app container..."
-	@docker-compose up -d app
+	@docker-compose kill app
+	@docker-compose up  app
 
 dev:
 	@echo "Starting development environment..."

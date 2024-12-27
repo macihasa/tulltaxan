@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
+	"regexp"
 	"tulltaxan/pkg/db"
 
 	"github.com/jackc/pgx/v5"
@@ -34,11 +36,9 @@ func SearchHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Write results as HTML for HTMX
 	w.Header().Set("Content-Type", "text/html")
 	for _, result := range results {
-		// Format descriptions into a list
+		// Format descriptions into a list with levels
 		descriptions := ""
-		for _, desc := range result.Descriptions {
-			descriptions += fmt.Sprintf("<li>%s (%s)</li>", desc.Description, desc.LanguageID)
-		}
+		descriptions += fmt.Sprintf("<li>%s</li>", highlightText(result.Description, query))
 		fmt.Fprintf(w, `
 			<div class="result">
 				<strong>HS Code:</strong> %s
@@ -46,4 +46,17 @@ func SearchHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 			</div>
 		`, result.Code, descriptions)
 	}
+}
+
+// highlightText highlights all occurrences of the search term in the given text, case-insensitively.
+func highlightText(text, term string) string {
+	// Escape special HTML characters in the term to prevent HTML injection
+	escapedTerm := html.EscapeString(term)
+
+	// Compile a case-insensitive regex pattern for the term
+	pattern := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(escapedTerm))
+
+	// Replace all matches with the highlighted term
+	highlighted := fmt.Sprintf(`<strong>%s</strong>`, escapedTerm)
+	return pattern.ReplaceAllString(text, highlighted)
 }

@@ -22,7 +22,7 @@ type Measure struct {
 	DateStart                        FileDistTime                     `xml:"dateStart,attr"`
 	Expression                       *string                          `xml:"expression,attr"`
 	GeographicalAreaID               string                           `xml:"geographicalAreaId,attr"`
-	GoodsNomenclatureCode            *int                             `xml:"goodsNomenclatureCode,attr"`
+	GoodsNomenclatureCode            string                           `xml:"goodsNomenclatureCode,attr"`
 	JustificationRegulationID        *string                          `xml:"justificationRegulationId,attr"`
 	JustificationRegulationRoleType  *int                             `xml:"justificationRegulationRoleType,attr"`
 	MeasureType                      string                           `xml:"measureType,attr"`
@@ -141,7 +141,7 @@ type MeasureConditions []MeasureCondition
 type MeasureCondition struct {
 	ParentSID                    int                        // added ParentSID
 	SID                          int                        `xml:"SID,attr"`
-	ActionCode                   int                        `xml:"actionCode,attr"`
+	ActionCode                   string                     `xml:"actionCode,attr"`
 	CertificateCode              *string                    `xml:"certificateCode,attr"`
 	CertificateType              *string                    `xml:"certificateType,attr"`
 	ConditionCodeID              string                     `xml:"conditionCodeId,attr"`

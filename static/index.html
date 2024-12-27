@@ -1,21 +1,148 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>HTMX Example</title>
+    <title>HS Code Search</title>
     <script src="https://unpkg.com/htmx.org"></script>
-    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        /* Global Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Background Gradient */
+        body {
+            font-family: 'Ubuntu', sanHS Codes-serif;
+            background: linear-gradient(135deg, #f7f7f7, #e8ecef);
+            color: black;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #E95420;
+            margin: 20px 0;
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        /* Centered Container */
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Search Input */
+        #search {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #dcdfe3;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        #search:focus {
+            border-color: #E95420;
+            box-shadow: 0 0 8px rgba(233, 84, 32, 0.6);
+            outline: none;
+        }
+
+        /* Results Section */
+        #results {
+            margin-top: 20px;
+        }
+
+        .result {
+            padding: 15px;
+            background: #fefefe;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .result:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+        }
+
+        /* Result Title */
+        .result strong {
+            font-size: 20px;
+            color: #E95420;
+        }
+
+        /* Description List */
+        .result ul {
+            margin: 10px 0 0 0;
+            padding: 0;
+            list-style: none;
+            color: #555;
+        }
+
+        .result ul li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        /* Highlighting Text */
+        mark {
+            background-color: #ffdd94;
+            color: #333;
+            font-weight: bold;
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+
+        /* Subtle Footer */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 0 0 10px 10px;
+        }
+
+    </style>
 </head>
 <body>
     <h1>HS Code Search</h1>
 
-    <!-- Search input with HTMX -->
-    <input type="text" id="search" name="q" placeholder="Enter search term..."
-           hx-get="/search"
-           hx-trigger="keyup changed delay:50ms"
-           hx-target="#results"
-           hx-swap="innerHTML">
+    <div class="container">
+        <!-- Search input -->
+        <input type="text" id="search" name="q" placeholder="Enter search term..."
+               hx-get="/search"
+               hx-trigger="keydown changed delay:10ms"
+               hx-target="#results"
+               hx-swap="innerHTML">
 
-    <!-- Results container -->
-    <div id="results"></div>
+
+        <!-- Results container -->
+        <div id="results"></div>
+    </div>
+
+    <footer>
+        Martin Andersson <a href="https://github.com/macihasa">github.</a>
+    </footer>
+
+    <script>
+        // Show loader during input
+        const searchInput = document.getElementById('search');
+        const loader = document.getElementById('loader');
+        searchInput.addEventListener('input', () => {
+            loader.style.display = 'block';
+            setTimeout(() => loader.style.display = 'none', 300); // Simulated loading time
+        });
+    </script>
 </body>
 </html>

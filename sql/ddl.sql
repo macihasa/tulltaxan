@@ -231,7 +231,7 @@ CREATE INDEX if NOT EXISTS idx_measure_type_sid ON measure (measure_type, sid);
 CREATE TABLE IF NOT EXISTS measure_condition (
 	sid INT PRIMARY KEY,
 	parent_sid INT,
-	action_code INT,
+	action_code VARCHAR(255),
 	certificate_code VARCHAR(255),
 	certificate_type VARCHAR(255),
 	condition_code_id VARCHAR(255),
@@ -904,35 +904,3 @@ CREATE TABLE IF NOT EXISTS inserted_files (
 	file_size FLOAT
 );
 
-
-
--- VIEWS
-DROP MATERIALIZED VIEW IF EXISTS mv_goods_nomenclature_search;
-
-CREATE MATERIALIZED VIEW mv_goods_nomenclature_search AS
-SELECT
-    gn.goods_nomenclature_code AS hs_code,
-    jsonb_agg(
-        jsonb_build_object(
-            'description', gnd.description,
-            'language_id', gnd.language_id
-        )
-    ) AS descriptions,
-    -- Pre-flatten descriptions into a single text field
-    string_agg(gnd.description, ' ') AS flattened_descriptions
-FROM
-    goods_nomenclature gn
-LEFT JOIN
-    goods_nomenclature_description_period gndp
-    ON gn.sid = gndp.parent_sid
-LEFT JOIN 
-    goods_nomenclature_description gnd
-    ON gndp.sid = gnd.parent_sid
-GROUP BY
-    gn.goods_nomenclature_code;
-
-CREATE INDEX IF NOT EXISTS idx_mv_goods_nomenclature_search
-ON mv_goods_nomenclature_search
-USING gin (
-    to_tsvector('english', hs_code || ' ' || flattened_descriptions)
-);
