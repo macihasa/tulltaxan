@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"tulltaxan/pkg/db"
@@ -59,4 +61,22 @@ func highlightText(text, term string) string {
 	// Replace all matches with the highlighted term
 	highlighted := fmt.Sprintf(`<strong>%s</strong>`, escapedTerm)
 	return pattern.ReplaceAllString(text, highlighted)
+}
+
+func IpHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("IP Endpoint hit..")
+	response, err := http.Get(`https://ipinfo.io/ip`)
+	if err != nil {
+		slog.Error("unable to get ip adress", err)
+		http.Error(w, "unable to get req for ip: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	ip, err := io.ReadAll(response.Body)
+	if err != nil {
+		slog.Error("unable to read response body", err)
+		http.Error(w, "unable to read response body: "+err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Write(ip)
+
 }

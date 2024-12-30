@@ -33,12 +33,20 @@ func main() {
 	}
 	defer conn.Close(ctx)
 
-	if err := insertSQLFiles([]string{ddlFile, ddlViewsFile}, ctx, conn); err != nil {
+	// Create tables
+	if err := insertSQLFiles([]string{ddlFile}, ctx, conn); err != nil {
 		log.Fatal("insertSQLFiles: ", err)
 	}
 
+	// Insert filedist content
 	filedist.StartDbMaintenanceScheduler(conn)
 
+	// Construct materialized views
+	if err := insertSQLFiles([]string{ddlViewsFile}, ctx, conn); err != nil {
+		log.Fatal("insertSQLFiles: ", err)
+	}
+
+	// Serve UI
 	staticDir := "./static"
 	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/", fs)
@@ -47,6 +55,7 @@ func main() {
 	http.Handle("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handlers.SearchHandler(w, r, conn)
 	}))
+	http.HandleFunc("/ip", handlers.IpHandler)
 
 	log.Printf("server listening on port %s\n", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

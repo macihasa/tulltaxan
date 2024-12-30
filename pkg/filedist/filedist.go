@@ -89,9 +89,8 @@ func downloadPublicKey(url string) (string, error) {
 // performDbMaintenance performs the necessary maintenance tasks on the database.
 // It downloads new files from the distribution, processes them into the database, and sets the active codes.
 func performDbMaintenance(pubKey string, conn *pgx.Conn) error {
-	slog.Info("Starting database maintenance")
+	slog.Info("Starting database maintenance..")
 
-	slog.Info("Downloading new files from distribution")
 	// Download new files from distribution
 	totFiles, err := downloadAndPrepareNewFiles("https://distr.tullverket.se/tulltaxan/xml/tot/", pubKey, conn)
 	if err != nil {
@@ -112,7 +111,7 @@ func performDbMaintenance(pubKey string, conn *pgx.Conn) error {
 // This function downloads, decrypts, and decompresses files that are available in the distribution.
 // If a file already exists in the output directory, it is skipped. It returns a list of the resulting files.
 func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]string, error) {
-	slog.Debug("Retrieving files", "URL", distUrl)
+	slog.Info("Download and preparation process started", "URL", distUrl)
 
 	response, err := http.Get(distUrl)
 	if err != nil {
@@ -147,16 +146,23 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 			return nil, fmt.Errorf("unable to construct valid URL for tot file dist, url: [%v] err: %w", fileUrl, err)
 		}
 
+		distLogger := slog.With("filename", filepath.Base(fileUrl))
+
 		// Download and prepare the file to a usable format
+		distLogger.Info("Downloading file")
 		gzReader, err := fetchDecryptedReader(fileUrl, pubKey)
 		if err != nil {
 			return nil, fmt.Errorf("downloadAndPrepareFile: %w", err)
 		}
+
+		distLogger.Info("Download finished, decoding")
 		export := new(xmltypes.Export)
 		err = xml.NewDecoder(gzReader).Decode(export)
 		if err != nil {
 			return nil, err
 		}
+
+		distLogger.Info("Decoding finished, inserting to DB")
 
 		// Reflect over struct values to insert into the database
 		val := reflect.ValueOf(export.Items)
@@ -185,7 +191,7 @@ func downloadAndPrepareNewFiles(distUrl, pubKey string, conn *pgx.Conn) ([]strin
 			}
 		}
 		// Save the resulting file name in the list
-		slog.Info("Dist file processed into DB", "filename", v)
+		distLogger.Info("Dist file processed into DB")
 
 		gzReader.Close()
 	}
@@ -321,7 +327,6 @@ func extractDate(filename string) (time.Time, error) {
 // fetchDecryptedReader downloads, decrypts, and decompresses a PGP-encrypted, GZIP-compressed file from a given URL.
 // It returns an io.Reader for the decompressed content.
 func fetchDecryptedReader(url, pubKey string) (io.ReadCloser, error) {
-	slog.Info("Downloading file", "url", url)
 
 	// Download the file
 	response, err := http.Get(url)

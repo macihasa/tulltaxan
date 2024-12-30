@@ -1,11 +1,17 @@
 
 SELECT 
+	m.sid,
     (mc.certificate_type || mc.certificate_code) AS y_code,
-    (m.additional_code_type || m.additional_code_id) AS additional_code
+    (m.additional_code_type || m.additional_code_id) AS additional_code,
+	ma,
+	mt,
+	mtd
 FROM 
     measure m
     LEFT JOIN measure_type mt ON m.measure_type = mt.measure_type
+	LEFT JOIN measure_type_description mtd ON mt.measure_type = mtd.parent_measure_type
     LEFT JOIN measure_condition mc ON m.sid = mc.parent_sid
+	LEFT JOIN measure_action ma ON mc.action_code = ma.action_code
     LEFT JOIN base_regulation br ON m.regulation_id = br.regulation_id
     LEFT JOIN modification_regulation mr ON m.regulation_id = mr.modification_regulation_id
     LEFT JOIN certificate c ON mc.certificate_code = c.certificate_code

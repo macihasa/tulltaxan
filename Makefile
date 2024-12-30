@@ -26,3 +26,8 @@ up:
 down:
 	@echo "Stopping services..."
 	@docker-compose down
+reset:
+	@echo "Resetting services and database..."
+	@docker-compose down -v
+	@docker volume prune -f
+	@docker-compose up --build
