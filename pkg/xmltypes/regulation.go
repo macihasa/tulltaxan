@@ -39,8 +39,9 @@ func (regulations BaseRegulations) BatchInsert(ctx context.Context, conn *pgx.Co
 		national, official_journal_id, regulation_approved_flag, regulation_group, replacement_indicator, stopped_flag, url
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-	ON CONFLICT (regulation_id, regulation_role_type) DO UPDATE 
+	ON CONFLICT (regulation_id) DO UPDATE 
 	SET antidumping_regulation_id = EXCLUDED.antidumping_regulation_id,
+		regulation_role_type = EXCLUDED.regulation_role_type,
 		antidumping_regulation_role_type = EXCLUDED.antidumping_regulation_role_type,
 		change_type = EXCLUDED.change_type,
 		community_code = EXCLUDED.community_code,
@@ -61,7 +62,7 @@ func (regulations BaseRegulations) BatchInsert(ctx context.Context, conn *pgx.Co
 
 	deleteQuery := `
 	DELETE FROM base_regulation
-	WHERE regulation_id = $1 AND regulation_role_type = $2;
+	WHERE regulation_id = $1;
 	`
 
 	batch := &pgx.Batch{}
@@ -75,8 +76,7 @@ func (regulations BaseRegulations) BatchInsert(ctx context.Context, conn *pgx.Co
 				reg.StoppedFlag, reg.Url)
 
 		case "D": // Delete
-			batch.Queue(deleteQuery, reg.RegulationID, reg.RegulationRoleType)
-
+			batch.Queue(deleteQuery, reg.RegulationID)
 		default:
 			return fmt.Errorf("unknown ChangeType: %s for RegulationID: %s", reg.ChangeType, reg.RegulationID)
 		}
@@ -121,8 +121,9 @@ func (regs ModificationRegulations) BatchInsert(ctx context.Context, conn *pgx.C
 		national, official_journal_id, regulation_approved_flag, replacement_indicator, stopped_flag
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-	ON CONFLICT (modification_regulation_id, modification_regulation_role_type) DO UPDATE 
+	ON CONFLICT (modification_regulation_id) DO UPDATE 
 	SET base_regulation_id = EXCLUDED.base_regulation_id,
+		modification_regulation_role_type = EXCLUDED.modification_regulation_role_type,
 		base_regulation_role_type = EXCLUDED.base_regulation_role_type,
 		change_type = EXCLUDED.change_type,
 		date_end = EXCLUDED.date_end,
@@ -140,6 +141,7 @@ func (regs ModificationRegulations) BatchInsert(ctx context.Context, conn *pgx.C
 
 	batch := &pgx.Batch{}
 
+	fmt.Print("Inserting modification regulations\n")
 	for i, reg := range regs {
 		batch.Queue(insertQuery, reg.ModificationRegulationID, reg.ModificationRegulationRoleType, reg.BaseRegulationID, reg.BaseRegulationRoleType,
 			reg.ChangeType, reg.DateEnd, reg.DatePublished, reg.DateStart, reg.Description, reg.EffectiveEndDate, reg.JournalPage,
@@ -192,8 +194,9 @@ func (regs FullTemporaryStopRegulations) BatchInsert(ctx context.Context, conn *
 		replacement_indicator, stopped_flag
 	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-	ON CONFLICT (fts_regulation_id, fts_regulation_role_type) DO UPDATE 
+	ON CONFLICT (fts_regulation_id) DO UPDATE 
 	SET change_type = EXCLUDED.change_type,
+		fts_regulation_role_type = EXCLUDED.fts_regulation_role_type,
 		date_start = EXCLUDED.date_start,
 		date_end = EXCLUDED.date_end,
 		date_published = EXCLUDED.date_published,
@@ -212,9 +215,8 @@ func (regs FullTemporaryStopRegulations) BatchInsert(ctx context.Context, conn *
 		fts_regulation_id, stopped_regulation_id, stopped_regulation_role_type, national
 	)
 	VALUES ($1, $2, $3, $4)
-	ON CONFLICT (fts_regulation_id, stopped_regulation_id) DO UPDATE 
-	SET stopped_regulation_role_type = EXCLUDED.stopped_regulation_role_type,
-		national = EXCLUDED.national;
+	ON CONFLICT (fts_regulation_id, stopped_regulation_id, stopped_regulation_role_type) DO UPDATE 
+	SET national = EXCLUDED.national;
 	`
 
 	batch := &pgx.Batch{}
