@@ -16,18 +16,15 @@ import (
 
 // SearchHandler processes HTMX search requests
 func SearchHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
-
-	// Extract the 'q' query parameter
 	query := r.URL.Query().Get("q")
 	if query == "" {
 		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
 		return
 	}
 
-	// Log the query for debugging
 	log.Printf("Received query: %s", query)
 
-	// Query the database using the updated db package function
+	// Fetch the results from the database
 	results, err := db.SearchHSCodes(context.Background(), conn, query)
 	if err != nil {
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
@@ -35,18 +32,39 @@ func SearchHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
-	// Write results as HTML for HTMX
+	// Respond with HTML content
 	w.Header().Set("Content-Type", "text/html")
 	for _, result := range results {
-		// Format descriptions into a list with levels
-		descriptions := ""
-		descriptions += fmt.Sprintf("<li>%s</li>", highlightText(result.Description, query))
+		certificatesHTML := ""
+		for _, cert := range result.MeasureComponents.Certificates {
+			certificatesHTML += fmt.Sprintf("<li>%s</li>", html.EscapeString(string(cert)))
+		}
+
+		additionalCodesHTML := ""
+		for _, code := range result.MeasureComponents.AdditionalCodes {
+			additionalCodesHTML += fmt.Sprintf("<li>%s</li>", html.EscapeString(string(code)))
+		}
+
+		// Construct the result HTML with nested lists
 		fmt.Fprintf(w, `
-			<div class="result">
-				<strong>HS Code:</strong> %s
-				<ul>%s</ul>
-			</div>
-		`, result.Code, descriptions)
+            <div class="result">
+                <strong>HS Code:</strong> %s
+                <ul>
+                    <li><strong>Description:</strong> %s</li>
+                    <li><strong>Certificates:</strong>
+                        <ul>%s</ul>
+                    </li>
+                    <li><strong>Additional Codes:</strong>
+                        <ul>%s</ul>
+                    </li>
+                </ul>
+            </div>
+        `,
+			html.EscapeString(result.Code),
+			highlightText(html.EscapeString(result.Description), query),
+			certificatesHTML,
+			additionalCodesHTML,
+		)
 	}
 }
 

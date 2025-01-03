@@ -13,7 +13,7 @@
 
         /* Background Gradient */
         body {
-            font-family: 'Ubuntu', sanHS Codes-serif;
+            font-family: 'Ubuntu', sans-serif;
             background: linear-gradient(135deg, #f7f7f7, #e8ecef);
             color: black;
             line-height: 1.6;
@@ -95,6 +95,18 @@
             font-size: 14px;
         }
 
+        /* Nested Lists */
+        .result ul li ul {
+            margin-left: 20px;
+            list-style-type: circle;
+        }
+
+        .result ul li ul li {
+            font-size: 14px;
+            color: #666;
+            margin: 3px 0;
+        }
+
         /* Highlighting Text */
         mark {
             background-color: #ffdd94;
@@ -112,7 +124,6 @@
             font-size: 14px;
             border-radius: 0 0 10px 10px;
         }
-
     </style>
 </head>
 <body>
@@ -125,7 +136,6 @@
                hx-trigger="keydown changed delay:10ms"
                hx-target="#results"
                hx-swap="innerHTML">
-
 
         <!-- Results container -->
         <div id="results"></div>

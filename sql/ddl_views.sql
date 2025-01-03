@@ -45,12 +45,16 @@ SELECT
     'Chapter' AS chapter_level,
     chapter.description AS chapter_descriptions
 FROM mv_hs_desc mvd
+INNER JOIN declarable_goods_nomenclature dgn
+    ON LEFT(mvd.hs_code, 8) = dgn.goods_nomenclature_code AND RIGHT(mvd.hs_code, 2) = '00'
 LEFT JOIN mv_hs_desc hs_undernumber 
     ON LEFT(mvd.hs_code, 6) || '0000' = hs_undernumber.hs_code
 LEFT JOIN mv_hs_desc hs 
     ON LEFT(mvd.hs_code, 4) || '000000' = hs.hs_code
 LEFT JOIN mv_hs_desc chapter 
-    ON LEFT(mvd.hs_code, 2) || '00000000' = chapter.hs_code;
+    ON LEFT(mvd.hs_code, 2) || '00000000' = chapter.hs_code
+;
+
 
 -- HS SEARCH
 DROP MATERIALIZED VIEW IF EXISTS mv_goods_nomenclature_search CASCADE;
